@@ -4,8 +4,6 @@ import { motion } from "framer-motion"
 import { FaLock, FaUser, FaEye, FaEyeSlash } from "react-icons/fa"
 
 // Credenciales encriptadas (base64)
-// Usuario: nalle
-// Password: irisbolita
 const ENCRYPTED_USER = "bmFsbGU="
 const ENCRYPTED_PASSWORD = "aXJpc2JvbGl0YQ=="
 
@@ -14,23 +12,31 @@ function AdminLogin() {
     usuario: "",
     password: ""
   })
+
   const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    
-    // Desencriptar y verificar credenciales (case-insensitive)
-    const decryptedUser = atob(ENCRYPTED_USER)
-    const decryptedPassword = atob(ENCRYPTED_PASSWORD)
-    
-    if (formData.usuario.toLowerCase() === decryptedUser.toLowerCase() && 
-        formData.password.toLowerCase() === decryptedPassword.toLowerCase()) {
-      localStorage.setItem("adminAuth", "true")
-      navigate("/admin")
-    } else {
-      alert("Credenciales incorrectas")
-    }
+    setLoading(true)
+
+    setTimeout(() => {
+      const decryptedUser = atob(ENCRYPTED_USER)
+      const decryptedPassword = atob(ENCRYPTED_PASSWORD)
+
+      if (
+        formData.usuario.toLowerCase() === decryptedUser.toLowerCase() &&
+        formData.password.toLowerCase() === decryptedPassword.toLowerCase()
+      ) {
+        localStorage.setItem("adminAuth", "true")
+        navigate("/admin")
+      } else {
+        alert("Credenciales incorrectas")
+      }
+
+      setLoading(false)
+    }, 700)
   }
 
   const handleChange = (e) => {
@@ -41,62 +47,82 @@ function AdminLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-cyan-900 flex items-center justify-center px-6">
+    <div className="min-h-screen flex items-center justify-center px-6 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 relative overflow-hidden">
+
+      {/* fondo glow */}
+      <div className="absolute w-[500px] h-[500px] bg-cyan-500/20 rounded-full blur-3xl top-[-120px] left-[-120px]" />
+      <div className="absolute w-[400px] h-[400px] bg-blue-500/20 rounded-full blur-3xl bottom-[-120px] right-[-120px]" />
+
       <motion.div
         initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[40px] p-8 md:p-12 w-full max-w-md shadow-2xl"
+        className="relative z-10 w-full max-w-md bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl p-8 shadow-2xl"
       >
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
+
+        {/* LOGO */}
+        <div className="flex flex-col items-center mb-6">
+          <img
+            src="/logo.png"
+            alt="logo"
+            className="w-40 h-40 object-contain mb-3 drop-shadow-xl"
+          />
+
+          <h1 className="text-3xl font-bold text-white">
             Panel Admin
           </h1>
-          <p className="text-gray-300">
+
+          <p className="text-gray-300 text-sm">
             Nallely Fisioterapia
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
+
           {/* USUARIO */}
           <div>
-            <label className="block text-white font-medium mb-2">
+            <label className="text-white text-sm mb-2 block">
               Usuario
             </label>
+
             <div className="relative">
-              <FaUser className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+
               <input
                 type="text"
                 name="usuario"
                 value={formData.usuario}
                 onChange={handleChange}
                 required
-                className="w-full pl-12 pr-5 py-4 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition"
-                placeholder="usuario"
+                className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 outline-none transition"
+                placeholder="Ingresa tu usuario"
               />
             </div>
           </div>
 
           {/* PASSWORD */}
           <div>
-            <label className="block text-white font-medium mb-2">
+            <label className="text-white text-sm mb-2 block">
               Contraseña
             </label>
+
             <div className="relative">
-              <FaLock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full pl-12 pr-12 py-4 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition"
+                className="w-full pl-11 pr-11 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 outline-none transition"
                 placeholder="••••••••"
               />
+
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
@@ -108,14 +134,15 @@ function AdminLogin() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold py-4 rounded-2xl shadow-xl hover:shadow-cyan-500/30 transition duration-300"
+            disabled={loading}
+            className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg hover:shadow-cyan-500/30 transition"
           >
-            Iniciar Sesión
+            {loading ? "Ingresando..." : "Iniciar Sesión"}
           </motion.button>
         </form>
 
-        <p className="text-center text-gray-400 text-sm mt-6">
-          Solo personal autorizado
+        <p className="text-center text-gray-400 text-xs mt-5">
+          Acceso solo para personal autorizado
         </p>
       </motion.div>
     </div>
