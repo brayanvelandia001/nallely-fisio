@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { FaLock, FaUser } from "react-icons/fa"
+import { FaLock, FaUser, FaEye, FaEyeSlash } from "react-icons/fa"
 
 // Credenciales encriptadas (base64)
 // Usuario: nalle
@@ -14,16 +14,18 @@ function AdminLogin() {
     usuario: "",
     password: ""
   })
+  const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate()
 
   const handleSubmit = (e) => {
     e.preventDefault()
     
-    // Desencriptar y verificar credenciales
+    // Desencriptar y verificar credenciales (case-insensitive)
     const decryptedUser = atob(ENCRYPTED_USER)
     const decryptedPassword = atob(ENCRYPTED_PASSWORD)
     
-    if (formData.usuario === decryptedUser && formData.password === decryptedPassword) {
+    if (formData.usuario.toLowerCase() === decryptedUser.toLowerCase() && 
+        formData.password.toLowerCase() === decryptedPassword.toLowerCase()) {
       localStorage.setItem("adminAuth", "true")
       navigate("/admin")
     } else {
@@ -70,7 +72,7 @@ function AdminLogin() {
                 onChange={handleChange}
                 required
                 className="w-full pl-12 pr-5 py-4 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition"
-                placeholder="nalle"
+                placeholder="usuario"
               />
             </div>
           </div>
@@ -83,14 +85,21 @@ function AdminLogin() {
             <div className="relative">
               <FaLock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full pl-12 pr-5 py-4 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition"
+                className="w-full pl-12 pr-12 py-4 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition"
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
             </div>
           </div>
 
