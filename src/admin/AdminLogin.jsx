@@ -15,24 +15,44 @@ function AdminLogin() {
 
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // 👇 NUEVO
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+
   const navigate = useNavigate()
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setError("")
+    setSuccess("")
     setLoading(true)
 
     setTimeout(() => {
       const decryptedUser = atob(ENCRYPTED_USER)
       const decryptedPassword = atob(ENCRYPTED_PASSWORD)
 
+      // ⚠️ VALIDACIÓN CAMPOS VACÍOS
+      if (!formData.usuario || !formData.password) {
+        setError("⚠️ Todos los campos son obligatorios")
+        setLoading(false)
+        return
+      }
+
+      // 🔐 VALIDACIÓN LOGIN
       if (
         formData.usuario.toLowerCase() === decryptedUser.toLowerCase() &&
         formData.password.toLowerCase() === decryptedPassword.toLowerCase()
       ) {
+        setSuccess("✔ Acceso correcto")
         localStorage.setItem("adminAuth", "true")
-        navigate("/admin")
+
+        setTimeout(() => {
+          navigate("/admin")
+        }, 700)
+
       } else {
-        alert("Credenciales incorrectas")
+        setError("❌ Usuario o contraseña incorrectos")
       }
 
       setLoading(false)
@@ -76,6 +96,19 @@ function AdminLogin() {
             Nallely Fisioterapia
           </p>
         </div>
+
+        {/* MENSAJES */}
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-300 text-sm text-center">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 p-3 rounded-xl bg-green-500/20 border border-green-500/40 text-green-300 text-sm text-center">
+            {success}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
 
