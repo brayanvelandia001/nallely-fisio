@@ -102,26 +102,6 @@ function AdminDashboard() {
             </motion.button>
           ))}
         </motion.div>
-
-        {/* WHATSAPP INFO */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-8 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[30px] p-6 flex items-center gap-4"
-        >
-          <div className="bg-green-500 p-4 rounded-2xl">
-            <FaWhatsapp size={32} className="text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-white">
-              Notificaciones WhatsApp Activas
-            </h3>
-            <p className="text-gray-300">
-              Los pacientes recibirán confirmaciones automáticas por WhatsApp
-            </p>
-          </div>
-        </motion.div>
       </div>
     </div>
   )

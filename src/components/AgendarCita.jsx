@@ -1,7 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { FaCalendarAlt, FaClock, FaUser, FaPhone, FaEnvelope, FaCommentMedical } from "react-icons/fa"
-import { collection, addDoc, serverTimestamp } from "firebase/firestore"
+import { FaCalendarAlt, FaClock, FaUser, FaPhone, FaEnvelope, FaCommentMedical, FaBan } from "react-icons/fa"
+import { collection, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore"
 import { db } from "../firebase/config"
 
 const servicios = [
@@ -17,16 +17,29 @@ const horarios = [
 ]
 
 // Generar próximos 14 días
-const generarDias = () => {
+const generarDias = (citas, diasNoDisponibles) => {
   const dias = []
   const hoy = new Date()
   for (let i = 0; i < 14; i++) {
     const fecha = new Date(hoy)
     fecha.setDate(hoy.getDate() + i)
+    const fechaStr = fecha.toISOString().split('T')[0]
+    
+    // Obtener citas para este día
+    const citasDelDia = citas.filter(cita => cita.fecha === fechaStr)
+    
+    // Verificar si el día está marcado como no disponible
+    const esNoDisponible = diasNoDisponibles.includes(fechaStr)
+    
+    // Obtener horas ocupadas
+    const horasOcupadas = citasDelDia.map(cita => cita.hora)
+    
     dias.push({
-      fecha: fecha.toISOString().split('T')[0],
+      fecha: fechaStr,
       nombre: fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }),
-      completo: fecha.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+      completo: fecha.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }),
+      esNoDisponible,
+      horasOcupadas,
     })
   }
   return dias
@@ -42,7 +55,35 @@ function AgendarCita() {
     servicio: "",
     problema: ""
   })
-  const [diasDisponibles] = useState(generarDias())
+  const [diasDisponibles, setDiasDisponibles] = useState(generarDias([], []))
+  const [citas, setCitas] = useState([])
+  const [diasNoDisponibles, setDiasNoDisponibles] = useState([])
+
+  // Actualizar días disponibles cuando cambian las citas o días no disponibles
+  useEffect(() => {
+    setDiasDisponibles(generarDias(citas, diasNoDisponibles))
+  }, [citas, diasNoDisponibles])
+
+  // Cargar citas de Firebase
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "citas"), (snapshot) => {
+      const citasData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      setCitas(citasData)
+    })
+    return () => unsubscribe()
+  }, [])
+
+  // Cargar días no disponibles de Firebase
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "diasNoDisponibles"), (snapshot) => {
+      const diasData = snapshot.docs.map(doc => doc.data().fecha)
+      setDiasNoDisponibles(diasData)
+    })
+    return () => unsubscribe()
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -205,14 +246,29 @@ function AgendarCita() {
                       type="button"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setFormData({ ...formData, fecha: dia.fecha })}
-                      className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
-                        formData.fecha === dia.fecha
+                      onClick={() => !dia.esNoDisponible && setFormData({ ...formData, fecha: dia.fecha })}
+                      disabled={dia.esNoDisponible}
+                      className={`p-4 rounded-2xl border-2 transition-all duration-300 relative ${
+                        dia.esNoDisponible
+                          ? "bg-red-100 border-red-300 text-red-400 cursor-not-allowed opacity-60"
+                          : formData.fecha === dia.fecha
                           ? "bg-cyan-500 border-cyan-500 text-white shadow-lg shadow-cyan-500/30"
+                          : dia.horasOcupadas.length > 0
+                          ? "bg-yellow-100 border-yellow-300 text-yellow-700 hover:border-yellow-400"
                           : "bg-white border-gray-200 hover:border-cyan-300 text-gray-700"
                       }`}
                     >
                       <div className="text-sm font-medium">{dia.nombre}</div>
+                      {dia.horasOcupadas.length > 0 && (
+                        <div className="absolute top-1 right-1 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                          {dia.horasOcupadas.length}
+                        </div>
+                      )}
+                      {dia.esNoDisponible && (
+                        <div className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full">
+                          <FaBan size={10} />
+                        </div>
+                      )}
                     </motion.button>
                   ))}
                 </div>
@@ -221,6 +277,21 @@ function AgendarCita() {
                     Seleccionado: {diasDisponibles.find(d => d.fecha === formData.fecha)?.completo}
                   </p>
                 )}
+                {/* LEYENDA */}
+                <div className="flex flex-wrap gap-4 mt-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-cyan-500 rounded"></div>
+                    <span className="text-gray-600">Seleccionado</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-yellow-100 border border-yellow-300 rounded"></div>
+                    <span className="text-gray-600">Con citas</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
+                    <span className="text-gray-600">No disponible</span>
+                  </div>
+                </div>
               </div>
 
               {/* SELECCIÓN DE HORA */}
@@ -234,25 +305,38 @@ function AgendarCita() {
                     Selecciona una hora *
                   </label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                    {horarios.map((hora) => (
-                      <motion.button
-                        key={hora}
-                        type="button"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setFormData({ ...formData, hora })}
-                        className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
-                          formData.hora === hora
-                            ? "bg-cyan-500 border-cyan-500 text-white shadow-lg shadow-cyan-500/30"
-                            : "bg-white border-gray-200 hover:border-cyan-300 text-gray-700"
-                        }`}
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <FaClock size={14} />
-                          <span className="font-medium">{hora}</span>
-                        </div>
-                      </motion.button>
-                    ))}
+                    {horarios.map((hora) => {
+                      const diaSeleccionado = diasDisponibles.find(d => d.fecha === formData.fecha)
+                      const horaOcupada = diaSeleccionado?.horasOcupadas?.includes(hora)
+                      
+                      return (
+                        <motion.button
+                          key={hora}
+                          type="button"
+                          whileHover={{ scale: horaOcupada ? 1 : 1.05 }}
+                          whileTap={{ scale: horaOcupada ? 1 : 0.95 }}
+                          onClick={() => !horaOcupada && setFormData({ ...formData, hora })}
+                          disabled={horaOcupada}
+                          className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
+                            horaOcupada
+                              ? "bg-red-100 border-red-300 text-red-400 cursor-not-allowed opacity-60"
+                              : formData.hora === hora
+                              ? "bg-cyan-500 border-cyan-500 text-white shadow-lg shadow-cyan-500/30"
+                              : "bg-white border-gray-200 hover:border-cyan-300 text-gray-700"
+                          }`}
+                        >
+                          <div className="flex items-center justify-center gap-2">
+                            <FaClock size={14} />
+                            <span className="font-medium">{hora}</span>
+                          </div>
+                          {horaOcupada && (
+                            <div className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full">
+                              <FaBan size={8} />
+                            </div>
+                          )}
+                        </motion.button>
+                      )
+                    })}
                   </div>
                 </motion.div>
               )}
