@@ -54,7 +54,7 @@ function Navbar() {
 
           <li
             onClick={() =>
-              document.getElementById("Nosotros")?.scrollIntoView({
+              document.getElementById("SobreMi")?.scrollIntoView({
                 behavior: "smooth"
               })
             }

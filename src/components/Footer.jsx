@@ -92,7 +92,7 @@ function Footer() {
               </button>
 
               <button
-                onClick={() => document.getElementById("Nosotros")?.scrollIntoView({ behavior: "smooth" })}
+                onClick={() => document.getElementById("SobreMi")?.scrollIntoView({ behavior: "smooth" })}
                 className="text-left hover:text-cyan-400 transition duration-300 hover:translate-x-1"
               >
                 Nosotros
