@@ -1,51 +1,100 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { FaCalendarAlt, FaClock, FaUser, FaPhone, FaEnvelope, FaCommentMedical, FaBan } from "react-icons/fa"
-import { collection, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore"
+
+import {
+  FaCalendarAlt,
+  FaClock,
+  FaUser,
+  FaPhone,
+  FaEnvelope,
+  FaCommentMedical,
+  FaBan,
+  FaCheckCircle,
+  FaWhatsapp
+} from "react-icons/fa"
+
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  onSnapshot
+} from "firebase/firestore"
+
 import { db } from "../firebase/config"
 
 const servicios = [
-  "Rehabilitación",
-  "Fisioterapia deportiva",
-  "Movilidad",
-  "Masoterapia"
+  "Terapia Física Integral",
+  "Terapia Acuática",
+  "Estimulación Adecuada",
+  "Rehabilitación Deportiva",
+  "Rehabilitación Post Quirúrgica",
+  "Fisioterapia Neurológica",
+  "Fisioterapia Geriátrica",
+  "Entrenamiento Funcional",
+  "Rehabilitación para Personas con Amputación"
 ]
 
 const horarios = [
-  "09:00", "10:00", "11:00", "12:00", "13:00",
-  "14:00", "15:00", "16:00", "17:00", "18:00"
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00"
 ]
 
-// Generar próximos 14 días
+// GENERAR PRÓXIMOS 14 DÍAS
 const generarDias = (citas, diasNoDisponibles) => {
+
   const dias = []
+
   const hoy = new Date()
+
   for (let i = 0; i < 14; i++) {
+
     const fecha = new Date(hoy)
+
     fecha.setDate(hoy.getDate() + i)
-    const fechaStr = fecha.toISOString().split('T')[0]
-    
-    // Obtener citas para este día
-    const citasDelDia = citas.filter(cita => cita.fecha === fechaStr)
-    
-    // Verificar si el día está marcado como no disponible
-    const esNoDisponible = diasNoDisponibles.includes(fechaStr)
-    
-    // Obtener horas ocupadas
-    const horasOcupadas = citasDelDia.map(cita => cita.hora)
-    
+
+    const fechaStr = fecha.toISOString().split("T")[0]
+
+    const citasDelDia = citas.filter(
+      (cita) => cita.fecha === fechaStr
+    )
+
+    const esNoDisponible =
+      diasNoDisponibles.includes(fechaStr)
+
+    const horasOcupadas = citasDelDia.map(
+      (cita) => cita.hora
+    )
+
     dias.push({
       fecha: fechaStr,
-      nombre: fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }),
-      completo: fecha.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }),
+      nombre: fecha.toLocaleDateString("es-ES", {
+        weekday: "short",
+        day: "numeric",
+        month: "short"
+      }),
+      completo: fecha.toLocaleDateString("es-ES", {
+        weekday: "long",
+        day: "numeric",
+        month: "long"
+      }),
       esNoDisponible,
-      horasOcupadas,
+      horasOcupadas
     })
   }
+
   return dias
 }
 
 function AgendarCita() {
+
   const [formData, setFormData] = useState({
     nombre: "",
     email: "",
@@ -55,46 +104,77 @@ function AgendarCita() {
     servicio: "",
     problema: ""
   })
-  const [diasDisponibles, setDiasDisponibles] = useState(generarDias([], []))
-  const [citas, setCitas] = useState([])
-  const [diasNoDisponibles, setDiasNoDisponibles] = useState([])
 
-  // Actualizar días disponibles cuando cambian las citas o días no disponibles
+  const [diasDisponibles, setDiasDisponibles] =
+    useState(generarDias([], []))
+
+  const [citas, setCitas] = useState([])
+
+  const [diasNoDisponibles, setDiasNoDisponibles] =
+    useState([])
+
+  const [showSuccess, setShowSuccess] = useState(false)
+
+  // ACTUALIZAR DÍAS
   useEffect(() => {
-    setDiasDisponibles(generarDias(citas, diasNoDisponibles))
+
+    setDiasDisponibles(
+      generarDias(citas, diasNoDisponibles)
+    )
+
   }, [citas, diasNoDisponibles])
 
-  // Cargar citas de Firebase
+  // CARGAR CITAS
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "citas"), (snapshot) => {
-      const citasData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
-      setCitas(citasData)
-    })
+
+    const unsubscribe = onSnapshot(
+      collection(db, "citas"),
+      (snapshot) => {
+
+        const citasData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+
+        setCitas(citasData)
+      }
+    )
+
     return () => unsubscribe()
+
   }, [])
 
-  // Cargar días no disponibles de Firebase
+  // CARGAR DÍAS NO DISPONIBLES
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "diasNoDisponibles"), (snapshot) => {
-      const diasData = snapshot.docs.map(doc => doc.data().fecha)
-      setDiasNoDisponibles(diasData)
-    })
+
+    const unsubscribe = onSnapshot(
+      collection(db, "diasNoDisponibles"),
+      (snapshot) => {
+
+        const diasData = snapshot.docs.map(
+          (doc) => doc.data().fecha
+        )
+
+        setDiasNoDisponibles(diasData)
+      }
+    )
+
     return () => unsubscribe()
+
   }, [])
 
+  // SUBMIT
   const handleSubmit = async (e) => {
+
     e.preventDefault()
-    
-    // Agregar +57 automáticamente si no está presente
-    const telefonoFormateado = formData.telefono.startsWith('+') 
-      ? formData.telefono 
-      : `+57 ${formData.telefono}`
-    
+
+    const telefonoFormateado =
+      formData.telefono.startsWith("+")
+        ? formData.telefono
+        : `+57 ${formData.telefono}`
+
     try {
-      // Guardar cita en Firestore
+
       await addDoc(collection(db, "citas"), {
         nombre: formData.nombre,
         telefono: telefonoFormateado,
@@ -106,10 +186,13 @@ function AgendarCita() {
         estado: "pendiente",
         fechaCreacion: serverTimestamp()
       })
-      
-      console.log("Cita guardada en Firestore")
-      alert("¡Cita agendada con éxito! Te contactaremos pronto para confirmar.")
-      
+
+        setShowSuccess(true)
+
+        setTimeout(() => {
+          setShowSuccess(false)
+        }, 5000)
+
       setFormData({
         nombre: "",
         email: "",
@@ -119,13 +202,18 @@ function AgendarCita() {
         servicio: "",
         problema: ""
       })
+
     } catch (error) {
-      console.error("Error al guardar cita:", error)
-      alert("Hubo un error al agendar la cita. Por favor intenta nuevamente.")
+
+      console.error(error)
+
+      console.error("Error al agendar:", error)
+
     }
   }
 
   const handleChange = (e) => {
+
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -133,273 +221,460 @@ function AgendarCita() {
   }
 
   return (
-    <section id="agendar-cita" className="py-28 px-6 bg-gradient-to-b from-slate-50 to-white min-h-screen">
-      <div className="max-w-4xl mx-auto">
-        
+
+    <section
+      id="agendar-cita"
+      className="relative py-32 px-6 overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950"
+    >
+
+      {/* BLURS */}
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-cyan-500/10 blur-[140px] rounded-full" />
+
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-blue-500/10 blur-[140px] rounded-full" />
+
+      {/* GRID */}
+      <div className="absolute inset-0 opacity-[0.04] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:50px_50px]" />
+
+      <div className="max-w-5xl mx-auto relative z-10">
+
+       {/* ALERTA SUCCESS */}
+            {showSuccess && (
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35 }}
+                className="fixed inset-0 z-[9999] flex items-center justify-center px-6"
+              >
+
+                {/* FONDO OSCURO */}
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+                {/* CARD */}
+                <div className="relative overflow-hidden bg-slate-900/90 border border-cyan-400/20 rounded-[32px] p-8 md:p-10 shadow-[0_20px_80px_rgba(6,182,212,0.35)] max-w-md w-full">
+
+                  {/* GLOW */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 pointer-events-none" />
+
+                  {/* ICONO */}
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{
+                      delay: 0.15,
+                      type: "spring",
+                      stiffness: 180
+                    }}
+                    className="relative mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-[0_10px_40px_rgba(6,182,212,0.45)]"
+                  >
+
+                    <FaCheckCircle className="text-white text-5xl" />
+
+                  </motion.div>
+
+                  {/* TEXTO */}
+                  <div className="relative text-center mt-8">
+
+                    <h3 className="text-3xl font-black text-white">
+                      ¡Cita agendada!
+                    </h3>
+
+                    <p className="text-gray-300 mt-4 leading-relaxed">
+                      Tu solicitud fue enviada correctamente.
+                      <br />
+                      Te contactaremos pronto para confirmar tu cita.
+                    </p>
+
+                  </div>
+
+                  {/* BARRA */}
+                  <div className="relative mt-8 h-2 w-full bg-white/10 rounded-full overflow-hidden">
+
+                    <motion.div
+                      initial={{ width: "100%" }}
+                      animate={{ width: "0%" }}
+                      transition={{ duration: 5, ease: "linear" }}
+                      className="h-full bg-gradient-to-r from-cyan-400 to-blue-500"
+                    />
+
+                  </div>
+
+                </div>
+
+              </motion.div>
+
+            )}
         {/* HEADER */}
         <motion.div
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          initial={{ opacity: 0, y: -25 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+          viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-5xl font-bold text-gray-800 mb-4">
-            Agenda tu Cita
+
+          <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-sm mb-6 backdrop-blur-xl">
+
+            <FaCalendarAlt />
+
+            Agenda tu valoración
+
+          </div>
+
+          <h2 className="text-5xl md:text-6xl font-black text-white leading-tight">
+
+            Reserva tu
+            <span className="text-cyan-400">
+              {" "}cita
+            </span>
+
           </h2>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Completa el formulario y agenda tu sesión de fisioterapia. Te contactaremos para confirmar.
+
+          <p className="text-gray-400 mt-6 text-lg max-w-2xl mx-auto leading-relaxed">
+
+            Completa el formulario para agendar tu sesión
+            de fisioterapia personalizada.
+
           </p>
+
         </motion.div>
 
-        {/* FORM */}
+        {/* FORM CARD */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-white rounded-[40px] shadow-2xl p-8 md:p-12 border border-gray-100"
+          initial={{ opacity: 0, y: 35 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+          viewport={{ once: true }}
+          className="relative bg-white/[0.06] backdrop-blur-2xl border border-white/10 rounded-[40px] p-8 md:p-12 shadow-[0_20px_80px_rgba(0,0,0,0.45)] overflow-hidden"
         >
-          <form onSubmit={handleSubmit} className="space-y-8">
 
-            {/* DATOS PERSONALES */}
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                <FaUser className="text-cyan-500" />
-                Datos Personales
+          {/* GLOW */}
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent pointer-events-none" />
+
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-10 relative z-10"
+          >
+
+            {/* DATOS */}
+            <div>
+
+              <h3 className="text-2xl font-bold text-white flex items-center gap-3 mb-8">
+
+                <FaUser className="text-cyan-400" />
+
+                Datos personales
+
               </h3>
 
               <div className="grid md:grid-cols-2 gap-6">
+
                 {/* NOMBRE */}
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Nombre completo *
+
+                  <label className="block text-gray-300 mb-3 font-medium">
+                    Nombre completo
                   </label>
+
                   <input
                     type="text"
                     name="nombre"
                     value={formData.nombre}
                     onChange={handleChange}
                     required
-                    className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition"
                     placeholder="Tu nombre"
+                    className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/10 outline-none transition"
                   />
+
                 </div>
 
                 {/* TELÉFONO */}
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Teléfono *
+
+                  <label className="block text-gray-300 mb-3 font-medium">
+                    Teléfono
                   </label>
+
                   <div className="relative">
-                    <FaPhone className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
+
+                    <FaPhone className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500" />
+
                     <input
                       type="tel"
                       name="telefono"
                       value={formData.telefono}
                       onChange={handleChange}
                       required
-                      className="w-full pl-12 pr-5 py-4 rounded-2xl border border-gray-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition"
                       placeholder="300 123 4567"
+                      className="w-full pl-14 pr-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/10 outline-none transition"
                     />
+
                   </div>
-                  <p className="text-gray-500 text-sm mt-1">
-                    Solo escribe tu número (ej: 300 123 4567)
-                  </p>
+
                 </div>
 
                 {/* EMAIL */}
                 <div className="md:col-span-2">
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Email *
+
+                  <label className="block text-gray-300 mb-3 font-medium">
+                    Correo electrónico
                   </label>
+
                   <div className="relative">
-                    <FaEnvelope className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
+
+                    <FaEnvelope className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500" />
+
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full pl-12 pr-5 py-4 rounded-2xl border border-gray-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition"
-                      placeholder="tu@email.com"
+                      placeholder="correo@email.com"
+                      className="w-full pl-14 pr-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/10 outline-none transition"
                     />
+
                   </div>
+
                 </div>
+
               </div>
+
             </div>
 
-            {/* FECHA Y HORA */}
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                <FaCalendarAlt className="text-cyan-500" />
-                Fecha y Hora
+            {/* FECHAS */}
+            <div>
+
+              <h3 className="text-2xl font-bold text-white flex items-center gap-3 mb-8">
+
+                <FaClock className="text-cyan-400" />
+
+                Fecha y hora
+
               </h3>
 
-              {/* SELECCIÓN DE FECHA */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-3">
-                  Selecciona una fecha *
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-3">
-                  {diasDisponibles.map((dia) => (
-                    <motion.button
-                      key={dia.fecha}
-                      type="button"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => !dia.esNoDisponible && setFormData({ ...formData, fecha: dia.fecha })}
-                      disabled={dia.esNoDisponible}
-                      className={`p-4 rounded-2xl border-2 transition-all duration-300 relative ${
-                        dia.esNoDisponible
-                          ? "bg-red-100 border-red-300 text-red-400 cursor-not-allowed opacity-60"
-                          : formData.fecha === dia.fecha
-                          ? "bg-cyan-500 border-cyan-500 text-white shadow-lg shadow-cyan-500/30"
-                          : dia.horasOcupadas.length > 0
-                          ? "bg-yellow-100 border-yellow-300 text-yellow-700 hover:border-yellow-400"
-                          : "bg-white border-gray-200 hover:border-cyan-300 text-gray-700"
-                      }`}
-                    >
-                      <div className="text-sm font-medium">{dia.nombre}</div>
-                      {dia.horasOcupadas.length > 0 && (
-                        <div className="absolute top-1 right-1 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                          {dia.horasOcupadas.length}
-                        </div>
-                      )}
-                      {dia.esNoDisponible && (
-                        <div className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full">
-                          <FaBan size={10} />
-                        </div>
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
-                {formData.fecha && (
-                  <p className="mt-3 text-cyan-600 font-medium">
-                    Seleccionado: {diasDisponibles.find(d => d.fecha === formData.fecha)?.completo}
-                  </p>
-                )}
-                {/* LEYENDA */}
-                <div className="flex flex-wrap gap-4 mt-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-cyan-500 rounded"></div>
-                    <span className="text-gray-600">Seleccionado</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-yellow-100 border border-yellow-300 rounded"></div>
-                    <span className="text-gray-600">Con citas</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
-                    <span className="text-gray-600">No disponible</span>
-                  </div>
-                </div>
+              {/* DÍAS */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-3">
+
+                {diasDisponibles.map((dia) => (
+
+                  <motion.button
+                    key={dia.fecha}
+                    type="button"
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.95 }}
+                    disabled={dia.esNoDisponible}
+                    onClick={() =>
+                      !dia.esNoDisponible &&
+                      setFormData({
+                        ...formData,
+                        fecha: dia.fecha
+                      })
+                    }
+                    className={`relative p-4 rounded-2xl border transition-all duration-300 ${
+                      dia.esNoDisponible
+                        ? "bg-red-500/10 border-red-500/20 text-red-300 opacity-60"
+                        : formData.fecha === dia.fecha
+                        ? "bg-cyan-500 border-cyan-400 text-white shadow-lg shadow-cyan-500/30"
+                        : "bg-white/5 border-white/10 text-gray-300 hover:border-cyan-400 hover:bg-cyan-500/10"
+                    }`}
+                  >
+
+                    <div className="text-sm font-semibold">
+                      {dia.nombre}
+                    </div>
+
+                    {dia.esNoDisponible && (
+                      <div className="absolute top-2 right-2">
+
+                        <FaBan size={11} />
+
+                      </div>
+                    )}
+
+                  </motion.button>
+
+                ))}
+
               </div>
 
-              {/* SELECCIÓN DE HORA */}
+              {/* HORAS */}
               {formData.fecha && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <label className="block text-gray-700 font-medium mb-3">
-                    Selecciona una hora *
-                  </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+
+                <div className="mt-8">
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+
                     {horarios.map((hora) => {
-                      const diaSeleccionado = diasDisponibles.find(d => d.fecha === formData.fecha)
-                      const horaOcupada = diaSeleccionado?.horasOcupadas?.includes(hora)
-                      
+
+                      const diaSeleccionado =
+                        diasDisponibles.find(
+                          (d) =>
+                            d.fecha === formData.fecha
+                        )
+
+                      const horaOcupada =
+                        diaSeleccionado?.horasOcupadas?.includes(
+                          hora
+                        )
+
                       return (
+
                         <motion.button
                           key={hora}
                           type="button"
-                          whileHover={{ scale: horaOcupada ? 1 : 1.05 }}
-                          whileTap={{ scale: horaOcupada ? 1 : 0.95 }}
-                          onClick={() => !horaOcupada && setFormData({ ...formData, hora })}
+                          whileHover={{
+                            scale: horaOcupada ? 1 : 1.04
+                          }}
+                          whileTap={{
+                            scale: horaOcupada ? 1 : 0.95
+                          }}
                           disabled={horaOcupada}
-                          className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
+                          onClick={() =>
+                            !horaOcupada &&
+                            setFormData({
+                              ...formData,
+                              hora
+                            })
+                          }
+                          className={`p-4 rounded-2xl border transition-all duration-300 ${
                             horaOcupada
-                              ? "bg-red-100 border-red-300 text-red-400 cursor-not-allowed opacity-60"
+                              ? "bg-red-500/10 border-red-500/20 text-red-300 opacity-50"
                               : formData.hora === hora
-                              ? "bg-cyan-500 border-cyan-500 text-white shadow-lg shadow-cyan-500/30"
-                              : "bg-white border-gray-200 hover:border-cyan-300 text-gray-700"
+                              ? "bg-cyan-500 border-cyan-400 text-white shadow-lg shadow-cyan-500/30"
+                              : "bg-white/5 border-white/10 text-gray-300 hover:border-cyan-400 hover:bg-cyan-500/10"
                           }`}
                         >
+
                           <div className="flex items-center justify-center gap-2">
-                            <FaClock size={14} />
-                            <span className="font-medium">{hora}</span>
+
+                            <FaClock size={13} />
+
+                            {hora}
+
                           </div>
-                          {horaOcupada && (
-                            <div className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full">
-                              <FaBan size={8} />
-                            </div>
-                          )}
+
                         </motion.button>
                       )
                     })}
+
                   </div>
-                </motion.div>
+
+                </div>
+
               )}
+
             </div>
 
             {/* SERVICIO */}
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                <FaCommentMedical className="text-cyan-500" />
-                Servicio y Detalles
+            <div>
+
+              <h3 className="text-2xl font-bold text-white flex items-center gap-3 mb-8">
+
+                <FaCommentMedical className="text-cyan-400" />
+
+                Servicio
+
               </h3>
 
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Tipo de servicio *
-                </label>
+              <div className="space-y-6">
+
+                {/* SELECT */}
                 <select
                   name="servicio"
                   value={formData.servicio}
                   onChange={handleChange}
                   required
-                  className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition appearance-none bg-white"
+                  className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/10 outline-none transition"
                 >
-                  <option value="">Selecciona un servicio</option>
+
+                  <option value="">
+                    Selecciona un servicio
+                  </option>
+
                   {servicios.map((servicio) => (
-                    <option key={servicio} value={servicio}>
+
+                    <option
+                      key={servicio}
+                      value={servicio}
+                      className="bg-slate-900"
+                    >
                       {servicio}
                     </option>
-                  ))}
-                </select>
-              </div>
 
-              {/* DESCRIPCIÓN DEL PROBLEMA */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Describe tu problema o lesión *
-                </label>
+                  ))}
+
+                </select>
+
+                {/* TEXTAREA */}
                 <textarea
                   name="problema"
                   value={formData.problema}
                   onChange={handleChange}
                   required
                   rows={5}
-                  className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition resize-none"
-                  placeholder="Describe brevemente tu problema, dolor o lesión. Esto nos ayudará a prepararte mejor para tu sesión..."
+                  placeholder="Describe tu lesión, dolor o situación..."
+                  className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/10 outline-none transition resize-none"
                 />
+
               </div>
+
             </div>
 
-            {/* BOTÓN ENVIAR */}
+            {/* INFO */}
+            <div className="grid md:grid-cols-3 gap-4">
+
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4">
+
+                <FaCheckCircle className="text-cyan-400 text-xl" />
+
+                <span className="text-sm text-gray-300">
+                  Confirmación rápida
+                </span>
+
+              </div>
+
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4">
+
+                <FaWhatsapp className="text-green-400 text-xl" />
+
+                <span className="text-sm text-gray-300">
+                  Atención vía WhatsApp
+                </span>
+
+              </div>
+
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4">
+
+                <FaCalendarAlt className="text-cyan-400 text-xl" />
+
+                <span className="text-sm text-gray-300">
+                  Agenda flexible
+                </span>
+
+              </div>
+
+            </div>
+
+            {/* BUTTON */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold py-5 rounded-2xl shadow-xl hover:shadow-cyan-500/30 transition duration-300 text-lg"
+              className="w-full py-5 rounded-2xl font-bold text-white text-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-[0_10px_40px_rgba(6,182,212,0.35)] hover:shadow-cyan-500/40 transition-all duration-300"
             >
-              Agendar Cita
+
+              Agendar cita
+
             </motion.button>
 
           </form>
+
         </motion.div>
 
       </div>
+
     </section>
   )
 }
